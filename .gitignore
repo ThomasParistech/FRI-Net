@@ -1,5 +1,8 @@
 __pycache__/
+.pyc
 /data/
 /results/
 /checkpoints/
 /models/ops/
+fork/input/
+fork/output/
