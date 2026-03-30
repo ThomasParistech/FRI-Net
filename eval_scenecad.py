@@ -139,7 +139,6 @@ def main(args):
     save_folder = f'./results'
     if not os.path.exists(save_folder):
         os.makedirs(save_folder, exist_ok=True)
-    
     evaluate(model, data_loader_eval, save_folder, args)
 
 

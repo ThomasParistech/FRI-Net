@@ -1,6 +1,7 @@
 # ruff: noqa
 # type: ignore
 # fmt: off
+import copy
 import os
 import sys
 import argparse
@@ -35,6 +36,12 @@ from datasets.occ_data import build as build_dataset
 from models.fri_net import build as build_model
 from shapely.ops import unary_union
 from util.postprocess_utils import postprocess
+from s3d_floorplan_eval.Evaluator.Evaluator import Evaluator
+from s3d_floorplan_eval.options import MCSSOptions
+from s3d_floorplan_eval.DataRW.S3DRW import S3DRW
+from s3d_floorplan_eval.DataRW.wrong_annotatios import wrong_s3d_annotations_list
+options = MCSSOptions()
+opts = options.parse()
 
 
 def get_args_parser():
@@ -103,6 +110,8 @@ def get_args_parser():
                         help='start epoch')
     parser.add_argument('--num_workers', default=2, type=int)
     parser.add_argument('--checkpoint', default="./checkpoints/pretrained_ckpt.pth", type=str)
+    parser.add_argument('--save_predictions', default=True, action='store_true',
+                        help='Save predicted polygons to predictions.json')
     return parser
 
 def main(args):
@@ -136,10 +145,10 @@ def main(args):
                                   drop_last=False, collate_fn=trivial_batch_collator, num_workers=args.num_workers,
                                   pin_memory=True)
 
-    save_folder = f'./results'
+    save_folder = f'./checkpoints/eval_stru3d'
     if not os.path.exists(save_folder):
         os.makedirs(save_folder, exist_ok=True)
-    
+
     evaluate(model, data_loader_eval, save_folder, args)
 
 
@@ -152,7 +161,12 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
         os.makedirs(npy_folder, exist_ok=True)
     if not os.path.exists(vis_folder):
         os.makedirs(vis_folder, exist_ok=True)
-    
+
+    save_predictions = args.save_predictions
+    scene_polys_out = {} if save_predictions else None
+    quant_result_dict = None
+    scene_counter = 0
+
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
 
@@ -184,12 +198,14 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
         bs = pred_lines.shape[0]
 
         for b_i in range(bs):
-            img = cv2.imread(f"{args.img_folder}/{img_names[b_i]}.png")
+            img_name = img_names[b_i]
+            if int(img_name) in wrong_s3d_annotations_list:
+                continue
+            img = cv2.imread(f"{args.img_folder}/{img_name}.png")
             scene_occ = shape_occ[b_i]
             convex_occ_per_scene = convex_occ[b_i]
             pred_lines_per_scene = pred_lines[b_i]
             room_num = 0
-            img_name = img_names[b_i]
 
             # select the valid room index
             valid_indices = torch.where(abs(torch.min(scene_occ, axis=1)[0]) < 0.01)[0].detach().cpu().numpy()
@@ -295,6 +311,21 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
                             polygon = polygon.union(polygon_list[_])
                     save_polygons.append(polygon)
             room_polys = postprocess(save_polygons)
+            if save_predictions:
+                scene_polys_out[str(img_name)] = [r.tolist() for r in room_polys]
+
+            curr_opts = copy.deepcopy(opts)
+            curr_opts.scene_id = "scene_0" + str(img_name)
+            curr_data_rw = S3DRW(curr_opts, mode="online_eval")
+            evaluator = Evaluator(curr_data_rw, curr_opts)
+            quant_result_dict_scene = evaluator.evaluate_scene(room_polys=room_polys)
+            if quant_result_dict is None:
+                quant_result_dict = quant_result_dict_scene
+            else:
+                for k in quant_result_dict.keys():
+                    quant_result_dict[k] += quant_result_dict_scene[k]
+            scene_counter += 1
+
             for room in room_polys:
                 for _ in range(room.shape[0]):
                     cv2.circle(img, room[_].astype(np.uint8), 3, [255, 255, 255], -1)
@@ -305,6 +336,28 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
             print(f'generate: {img_name}')
             cv2.imwrite(save_img_path, img)
             np.save(save_path, room_polys)
+
+    if save_predictions:
+        predictions_path = os.path.join(save_folder, 'predictions.json')
+        with open(predictions_path, 'w') as f:
+            json.dump(scene_polys_out, f)
+        print(f"Saved predictions to {predictions_path}")
+
+    for k in quant_result_dict.keys():
+        quant_result_dict[k] /= float(scene_counter)
+
+    for metric in ['room', 'corner', 'angles']:
+        prec = quant_result_dict[metric + '_prec']
+        rec = quant_result_dict[metric + '_rec']
+        f1 = 2 * prec * rec / (prec + rec)
+        quant_result_dict[metric + '_f1'] = f1
+
+    print("*************************************************")
+    print(quant_result_dict)
+    print("*************************************************")
+
+    with open(os.path.join(save_folder, 'results.txt'), 'w') as file:
+        file.write(json.dumps(quant_result_dict))
 
 
 def visualize(polygon_list, img):
