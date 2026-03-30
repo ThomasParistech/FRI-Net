@@ -4,5 +4,3 @@ __pycache__/
 /results/
 /checkpoints/
 /models/ops/
-fork/input/
-fork/output/

@@ -1,3 +1,6 @@
+# ruff: noqa
+# type: ignore
+# fmt: off
 import copy
 import functools
 import numpy as np
@@ -68,7 +71,7 @@ if __name__ == '__main__':
         quant_result_maskrcnn_dict = None
         scene_counter = 0
 
-        room_prec, room_rec, corner_prec, corner_rec, angles_prec, angles_rec = list(), list(), list(), list(), list(), list()
+        room_prec, room_rec, corner_prec, corner_rec, angles_prec, angles_rec, self_intersection = list(), list(), list(), list(), list(), list(), list()
         scene_ids = list()
 
         for scene_ind, scene in enumerate(scene_list):
@@ -132,6 +135,7 @@ if __name__ == '__main__':
             corner_rec.append(quant_result_dict_scene['corner_rec'])
             angles_prec.append(quant_result_dict_scene['angles_prec'])
             angles_rec.append(quant_result_dict_scene['angles_rec'])
+            self_intersection.append(quant_result_dict_scene['self_intersection'])
             scene_ids.append(scene)
 
         for k in quant_result_dict.keys():

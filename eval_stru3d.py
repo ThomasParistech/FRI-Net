@@ -1,3 +1,6 @@
+# ruff: noqa
+# type: ignore
+# fmt: off
 import os
 import sys
 import argparse

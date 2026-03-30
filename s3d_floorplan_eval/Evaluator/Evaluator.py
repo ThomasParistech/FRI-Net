@@ -1,3 +1,6 @@
+# ruff: noqa
+# type: ignore
+# fmt: off
 import os
 import torch
 import matplotlib.pyplot as plt
@@ -6,7 +9,7 @@ import numpy as np
 from scipy.spatial import Delaunay
 import os
 import shapely
-from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString
+from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString, LinearRing
 
 corner_metric_thresh = 10
 angle_metric_thresh = 5
@@ -593,6 +596,13 @@ class Evaluator():
             assert window_door_metric_prec <= 1
             assert window_door_metric_rec <= 1
 
+        # Self-intersection: True if any predicted polygon is self-intersecting
+        has_self_intersection = False
+        for poly in pred_polys:
+            if not LinearRing(poly).is_simple:
+                has_self_intersection = True
+                break
+
         result_dict = {
             'room_prec': room_metric_prec,
             'room_rec': room_metric_rec,
@@ -602,6 +612,7 @@ class Evaluator():
             'angles_rec': angles_metric_rec,
             'corner_rec_map': rec_map,
             'corner_prec_map': prec_map,
+            'self_intersection': float(has_self_intersection),
         }
 
         if pred_types is not None:
