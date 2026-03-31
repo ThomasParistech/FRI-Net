@@ -119,13 +119,7 @@ class Evaluator():
 
             edge_map = np.zeros_like(joint_room_map)
             room_filled_map = np.ones([joint_room_map.shape[0], joint_room_map.shape[1], 3])
-        data_name = self.data_rw.scene_id.split('_')[1]
-        input_img_path = f'/mnt/d/projects/FRI-Net/FRI-Net/data/stru3d/merge_0/{data_name}.png'
-        input_img = cv2.imread(input_img_path)
-        # density_map = self.data_rw.density_map.cpu().numpy()[0]
-        # density_map = (density_map * 255.0).astype(np.uint8)
-        # density_map = cv2.cvtColor(density_map, cv2.COLOR_GRAY2BGR)
-        density_map = input_img
+        density_map = self.data_rw.density_map.cpu().numpy()[0]
         img_size = (density_map.shape[0], density_map.shape[0])
 
         for room_ind, poly in enumerate(room_polys):
@@ -610,8 +604,8 @@ class Evaluator():
             'corner_rec': corner_metric_rec,
             'angles_prec': angles_metric_prec,
             'angles_rec': angles_metric_rec,
-            'corner_rec_map': rec_map,
-            'corner_prec_map': prec_map,
+            # 'corner_rec_map': rec_map,
+            # 'corner_prec_map': prec_map,
             'self_intersection': float(has_self_intersection),
         }
 

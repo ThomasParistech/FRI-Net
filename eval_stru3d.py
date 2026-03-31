@@ -316,7 +316,7 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
 
             curr_opts = copy.deepcopy(opts)
             curr_opts.scene_id = "scene_0" + str(img_name)
-            curr_data_rw = S3DRW(curr_opts, mode="online_eval")
+            curr_data_rw = S3DRW(curr_opts, mode="test")
             evaluator = Evaluator(curr_data_rw, curr_opts)
             quant_result_dict_scene = evaluator.evaluate_scene(room_polys=room_polys)
             if quant_result_dict is None:
@@ -343,6 +343,7 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
             json.dump(scene_polys_out, f)
         print(f"Saved predictions to {predictions_path}")
 
+    # N.B. corner_rec_map and corner_prec_map have been commented out
     for k in quant_result_dict.keys():
         quant_result_dict[k] /= float(scene_counter)
 
