@@ -355,7 +355,7 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
     print(quant_result_dict)
     print("*************************************************")
 
-    with open(os.path.join(save_folder, 'results.txt'), 'w') as file:
+    with open(os.path.join(save_folder, 'results.json'), 'w') as file:
         file.write(json.dumps(quant_result_dict))
 
 
