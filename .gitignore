@@ -3,3 +3,4 @@ __pycache__/
 /results/
 /checkpoints/
 /models/ops/
+s3d_floorplan_eval/montefloor_data/
