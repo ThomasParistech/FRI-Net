@@ -29,18 +29,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb1 libgl1-mesa-glx libglib2.0-0 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy full repo
-COPY . .
-
 # Set CUDA environment for building extensions without a GPU
 ENV FORCE_CUDA=1
 ENV TORCH_CUDA_ARCH_LIST="8.6"
 ENV CUDA_HOME=/usr/local/cuda
+
+# Copy only what's needed for compilation (cached unless these dirs change)
+COPY models/ops models/ops
 
 # Patch models/ops/setup.py: docker build has no GPU access, so force CUDA compilation via env var
 RUN sed -i 's/if torch.cuda.is_available() and CUDA_HOME is not None:/if (torch.cuda.is_available() or os.environ.get("FORCE_CUDA", "0") == "1") and CUDA_HOME is not None:/' models/ops/setup.py
 
 # Compile deformable-attention modules
 RUN cd models/ops && conda run -n frinet sh make.sh
+
+# Copy full repo (compilation layers are cached above)
+COPY . .
 
 ENV PYTHONPATH=/app
