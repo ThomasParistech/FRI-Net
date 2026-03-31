@@ -11,6 +11,7 @@ set -euo pipefail
 
 FORK_ROOT="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${FORK_ROOT}/.." && pwd)"
+MODULES_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
 IMAGE_NAME="frinet-infer"
 
 echo "Building Docker image '${IMAGE_NAME}'..."
@@ -21,6 +22,7 @@ docker run --rm --gpus all \
     -v "${REPO_ROOT}/checkpoints:/app/checkpoints" \
     -v "${REPO_ROOT}/data:/app/data" \
     -v "${REPO_ROOT}/s3d_floorplan_eval/montefloor_data:/app/s3d_floorplan_eval/montefloor_data" \
+    -v "${MODULES_ROOT}/benchmark_helper:/app/benchmark_helper" \
     "${IMAGE_NAME}" \
     conda run --no-capture-output -n frinet python3 eval_stru3d.py --checkpoint ./checkpoints/pretrained_ckpt.pth
 

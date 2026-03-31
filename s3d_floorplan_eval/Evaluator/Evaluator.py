@@ -9,7 +9,8 @@ import numpy as np
 from scipy.spatial import Delaunay
 import os
 import shapely
-from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString, LinearRing
+from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString
+from benchmark_helper.psi_metric import get_has_self_intersection
 
 corner_metric_thresh = 10
 angle_metric_thresh = 5
@@ -591,11 +592,7 @@ class Evaluator():
             assert window_door_metric_rec <= 1
 
         # Self-intersection: True if any predicted polygon is self-intersecting
-        has_self_intersection = False
-        for poly in pred_polys:
-            if not LinearRing(poly).is_simple:
-                has_self_intersection = True
-                break
+        has_self_intersection = get_has_self_intersection(pred_polys)
 
         result_dict = {
             'room_prec': room_metric_prec,
