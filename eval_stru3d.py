@@ -40,6 +40,7 @@ from s3d_floorplan_eval.Evaluator.Evaluator import Evaluator
 from s3d_floorplan_eval.options import MCSSOptions
 from s3d_floorplan_eval.DataRW.S3DRW import S3DRW
 from s3d_floorplan_eval.DataRW.wrong_annotatios import wrong_s3d_annotations_list
+from benchmark_helper.prediction_writer import PredictionWriter
 options = MCSSOptions()
 opts = options.parse()
 
@@ -163,7 +164,7 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
         os.makedirs(vis_folder, exist_ok=True)
 
     save_predictions = args.save_predictions
-    scene_polys_out = {} if save_predictions else None
+    pred_writer = PredictionWriter(save_folder, model="FRI_Net", dataset="stru3d") if save_predictions else None
     quant_result_dict = None
     scene_counter = 0
 
@@ -311,8 +312,8 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
                             polygon = polygon.union(polygon_list[_])
                     save_polygons.append(polygon)
             room_polys = postprocess(save_polygons)
-            if save_predictions:
-                scene_polys_out[str(img_name)] = [r.tolist() for r in room_polys]
+            if pred_writer is not None:
+                pred_writer.add_scene(str(img_name), room_polys)
 
             curr_opts = copy.deepcopy(opts)
             curr_opts.scene_id = "scene_0" + str(img_name)
@@ -337,11 +338,8 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
             cv2.imwrite(save_img_path, img)
             np.save(save_path, room_polys)
 
-    if save_predictions:
-        predictions_path = os.path.join(save_folder, 'predictions.json')
-        with open(predictions_path, 'w') as f:
-            json.dump(scene_polys_out, f)
-        print(f"Saved predictions to {predictions_path}")
+    if pred_writer is not None:
+        pred_writer.save()
 
     # N.B. corner_rec_map and corner_prec_map have been commented out
     for k in quant_result_dict.keys():
