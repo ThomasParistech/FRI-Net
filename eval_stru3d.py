@@ -40,6 +40,7 @@ from s3d_floorplan_eval.Evaluator.Evaluator import Evaluator
 from s3d_floorplan_eval.options import MCSSOptions
 from s3d_floorplan_eval.DataRW.S3DRW import S3DRW
 from s3d_floorplan_eval.DataRW.wrong_annotatios import wrong_s3d_annotations_list
+from benchmark_helper.metric_writer import MetricWriter
 from benchmark_helper.prediction_writer import PredictionWriter
 options = MCSSOptions()
 opts = options.parse()
@@ -164,7 +165,7 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
         os.makedirs(vis_folder, exist_ok=True)
 
     save_predictions = args.save_predictions
-    pred_writer = PredictionWriter(save_folder, model="FRI_Net", dataset="stru3d") if save_predictions else None
+    pred_writer = PredictionWriter(save_folder, model="FRI_Net", dataset="stru3d", save_intermediate=False) if save_predictions else None
     quant_result_dict = None
     scene_counter = 0
 
@@ -355,8 +356,7 @@ def evaluate(model, data_loader, save_folder, args, save_primitive=True):
     print(quant_result_dict)
     print("*************************************************")
 
-    with open(os.path.join(save_folder, 'results.json'), 'w') as file:
-        file.write(json.dumps(quant_result_dict))
+    MetricWriter.save(save_folder, quant_result_dict)
 
 
 def visualize(polygon_list, img):
